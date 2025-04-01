@@ -1,10 +1,18 @@
 using UnityEngine;
+using System.Collections;
 
 public class PlayerController : MonoBehaviour
 {
     // Movement settings
     public float moveSpeed = 5f;
     public float jumpForce = 15f;
+    
+    // Dash settings
+    public float dashSpeed = 12f;
+    public float dashDuration = 0.5f;
+    public float dashCooldown = 1f;
+    private bool isDashing = false;
+    private bool canDash = true;
     
     // Ground check
     public float rayLength = 0.6f;
@@ -38,8 +46,17 @@ public class PlayerController : MonoBehaviour
         // Get horizontal input
         float moveInput = Input.GetAxisRaw("Horizontal");
         
-        // Move the character
-        rb.linearVelocity = new Vector2(moveInput * moveSpeed, rb.linearVelocity.y);
+        // Check for dash input
+        if (Input.GetKeyDown(KeyCode.LeftShift) && canDash && moveInput != 0)
+        {
+            StartCoroutine(Dash(moveInput));
+        }
+        
+        // Move the character (if not dashing)
+        if (!isDashing)
+        {
+            rb.linearVelocity = new Vector2(moveInput * moveSpeed, rb.linearVelocity.y);
+        }
         
         // Flip sprite based on movement direction
         if (moveInput > 0)
@@ -64,10 +81,40 @@ public class PlayerController : MonoBehaviour
             rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
             Debug.Log("Jump executed!");
         }
-
         
         // Visual debug
         Debug.DrawRay(transform.position, Vector2.down * rayLength, isGrounded ? Color.green : Color.red);
+    }
+    
+    IEnumerator Dash(float direction)
+    {
+        // Start dash
+        Debug.Log("Dash executed!");
+        isDashing = true;
+        canDash = false;
+        
+        // Store original gravity
+        float originalGravity = rb.gravityScale;
+        
+        // Reduce gravity during dash (optional, makes dash feel more "horizontal")
+        rb.gravityScale = 0.5f;
+        
+        // Apply dash velocity
+        rb.linearVelocity = new Vector2(direction * dashSpeed, 0);
+        
+        // Optional - create dash effect
+        // Instantiate(dashEffectPrefab, transform.position, Quaternion.identity);
+        
+        // Wait for dash duration
+        yield return new WaitForSeconds(dashDuration);
+        
+        // End dash
+        isDashing = false;
+        rb.gravityScale = originalGravity;
+        
+        // Start cooldown
+        yield return new WaitForSeconds(dashCooldown - dashDuration);
+        canDash = true;
     }
     
     void FixedUpdate()
